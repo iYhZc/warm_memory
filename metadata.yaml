@@ -7,8 +7,8 @@ desc: >-
   手动压缩先生成摘要与候选记忆，用户审阅确认后才截断历史；可与主动消息插件协作读取有效已确认摘要并统计开销。
   不写入或修改人格，不限制回复长度；本发布版不面向群聊使用。
 version: 0.10.25
-author: Warm Memory Contributors
-# repo: 发布到 GitHub 后填写仓库地址，WebUI 的更新检查与插件市场展示会用到。
+author: YanH
+
 astrbot_version: ">=4.24.0"
 tags:
   - AI
