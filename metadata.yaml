@@ -1,0 +1,16 @@
+name: astrbot_plugin_warm_memory
+display_name: 有温度的长期记忆
+short_desc: 仅用于私聊的长期记忆、定时日记与审阅式对话压缩
+desc: >-
+  仅用于 AstrBot 私聊场景：按身份保存和召回长期记忆，支持按需语义检索、可选嵌入与重排序。
+  提供按会话启用的定时日记、基于用户原话证据的记忆整理、本地重复记忆合并和用途开销统计。
+  手动压缩先生成摘要与候选记忆，用户审阅确认后才截断历史；可与主动消息插件协作读取有效已确认摘要并统计开销。
+  不写入或修改人格，不限制回复长度；本发布版不面向群聊使用。
+version: 0.10.25
+author: Warm Memory Contributors
+# repo: 发布到 GitHub 后填写仓库地址，WebUI 的更新检查与插件市场展示会用到。
+astrbot_version: ">=4.24.0"
+tags:
+  - AI
+  - 记忆
+  - 日记

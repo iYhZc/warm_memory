@@ -1,0 +1,426 @@
+{
+  "memory_rerank_min_score": {
+    "description": "Rerank最低原始分数（0仅排序）",
+    "type": "float",
+    "default": 0.0,
+    "hint": "必须按提供商实测校准，分数不是概率。大于0时剔除低分候选，置顶和本地强匹配保留；失败或超时仍回退。可减少弱相关记忆，也可能漏掉边缘相关内容。",
+    "slider": {"min": 0, "max": 1, "step": 0.05}
+  },
+  "memory_context_placement": {
+    "description": "动态记忆上下文位置",
+    "type": "string",
+    "default": "system",
+    "options": ["system", "temporary"],
+    "hint": "temporary 使用 AstrBot 临时内容块承载本轮记忆、日记和滚动摘要，保持系统提示稳定且不写入历史；system 保留旧版系统提示注入。云端节省缓存开销建议 temporary。"
+  },
+  "chat_style_guard": {
+    "description": "注入“聊天方式”约束（不写人格）",
+    "type": "bool",
+    "hint": "默认开启。只在系统提示里加一段与人无关的约束：不自我介绍、不复述、不总结、不列点、不解释流程、不客套收尾，对方没问就不主动给方案。语气和称呼仍完全由 AstrBot 的人格设定决定；换人格不需要改这里。",
+    "default": true
+  },
+  "strip_reasoning_history": {
+    "description": "从历史里去掉模型自己的思考过程",
+    "type": "bool",
+    "hint": "默认开启。AstrBot 会把上一轮的 reasoning_content 存进上下文，模型容易模仿自己“分析式”的内心独白，读起来就像助手。开启后，纯文本的助手历史不再回放思考内容；带工具调用的回合保持原样。",
+    "default": true
+  },
+  "message_dedupe_seconds": {
+    "description": "重复投递去重窗口（秒）",
+    "type": "float",
+    "hint": "QQ/NapCat 偶尔会把同一条消息重复推送 2~3 次（消息 ID 相同）。在此窗口内收到相同 ID 的消息只处理第一次，其余直接丢弃，避免连回几遍。设为 0 关闭。",
+    "default": 10,
+    "slider": {
+      "min": 0,
+      "max": 60,
+      "step": 1
+    }
+  },
+  "auto_memory_enabled": {
+    "description": "自动提取长期记忆",
+    "type": "bool",
+    "hint": "每 N 个成功对话轮次在后台调用一次模型进行批量提取，不阻塞回复；即使同轮发生摘要压缩，这项提取仍是独立调用。关闭后仍可使用 /记住。",
+    "default": true
+  },
+  "memory_extract_interval": {
+    "description": "自动提取间隔（成功轮次）",
+    "type": "int",
+    "hint": "累计多少个成功的 AI 对话轮次后，批量检查明确表达的长期事实。",
+    "default": 12,
+    "slider": {
+      "min": 4,
+      "max": 50,
+      "step": 1
+    }
+  },
+  "memory_extract_concurrency": {
+    "description": "后台提取并发上限",
+    "type": "int",
+    "hint": "同时最多进行几个提取模型调用。1 表示排队执行，最省额度也最不影响主对话。",
+    "default": 1,
+    "slider": {
+      "min": 1,
+      "max": 4,
+      "step": 1
+    }
+  },
+  "auto_memory_min_importance": {
+    "description": "自动提取的最低重要度",
+    "type": "int",
+    "hint": "模型给出的重要度低于此值的候选会被丢弃（默认 3），用于过滤“感情需要慢慢培养”这类纯观点句。手动 /记住 不受影响。",
+    "default": 3,
+    "slider": {
+      "min": 1,
+      "max": 5,
+      "step": 1
+    }
+  },
+  "memory_capture_ttl_seconds": {
+    "description": "待提取消息的保留时间（秒）",
+    "type": "int",
+    "hint": "已入库但还没成功回复的轮次超过这个时间会被丢弃，避免异常中断后留下不完整的对话。已成功回复的轮次会保留到凑满一批为止（重启不丢）。",
+    "default": 900,
+    "slider": {
+      "min": 60,
+      "max": 7200,
+      "step": 60
+    }
+  },
+  "context_window_override": {
+    "description": "上下文窗口覆盖（Token，0=自动）",
+    "type": "int",
+    "hint": "默认 0 自动解析：当前提供商已解析的 max_context_tokens → provider 配置 → 模型元数据 → AstrBot 的 fallback_max_tokens → 旧版 max_context_length。AstrBot 升级换了字段名、或 /记忆 压缩 状态 显示的窗口不对时，可在这里写死（例如 1000000）。",
+    "default": 0,
+    "slider": {
+      "min": 0,
+      "max": 2000000,
+      "step": 1000
+    }
+  },
+  "fallback_context_tokens": {
+    "description": "全部探测失败时的估算上限",
+    "type": "int",
+    "hint": "只有在上面的自动解析和宿主配置都拿不到窗口时才使用。",
+    "default": 128000
+  },
+  "keep_recent_turns": {
+    "description": "压缩后保留的近期轮数",
+    "type": "int",
+    "hint": "未来生成手动压缩草稿时保留多少个完整轮次。修改本项不会立即截断历史，也不改变已经生成的草稿；长会话建议先预览，再生成并审阅。",
+    "default": 8,
+    "slider": {
+      "min": 1,
+      "max": 40,
+      "step": 1
+    }
+  },
+  "summary_max_chars": {
+    "description": "手动压缩摘要字符上限",
+    "type": "int",
+    "hint": "仅限制以后生成的滚动摘要，不是聊天回复或日记长度，也不是token数。修改不会执行压缩或重写已有草稿。长历史可提高预算，但摘要仍会遗漏细节。",
+    "default": 600,
+    "slider": {
+      "min": 100,
+      "max": 4000,
+      "step": 100
+    }
+  },
+  "summary_model_id": {
+    "description": "记忆提取/日记/整理模型",
+    "type": "string",
+    "hint": "留空时使用当前会话模型。可在这里选择更便宜的模型，用于记忆提取、日记和整理。",
+    "default": "",
+    "_special": "select_provider"
+  },
+  "memory_recall_limit": {
+    "description": "每轮召回的记忆条数上限",
+    "type": "int",
+    "hint": "只注入与本轮内容相关或足够重要的少量事实。",
+    "default": 5,
+    "slider": {
+      "min": 0,
+      "max": 20,
+      "step": 1
+    }
+  },
+  "memory_recall_max_chars": {
+    "description": "每轮记忆注入字符上限",
+    "type": "int",
+    "hint": "控制长期记忆对上下文 Token 的占用。",
+    "default": 800,
+    "slider": {
+      "min": 0,
+      "max": 3000,
+      "step": 100
+    }
+  },
+  "memory_recall_min_relevance": {
+    "description": "记忆相关度门槛",
+    "type": "float",
+    "hint": "普通记忆的字面匹配门槛；语义检索命中、置顶及显式开启的重要度绕过独立生效。",
+    "default": 0.15,
+    "slider": {
+      "min": 0.0,
+      "max": 0.8,
+      "step": 0.05
+    }
+  },
+  "memory_recall_always_include_important": {
+    "description": "重要记忆不受相关度限制",
+    "type": "bool",
+    "hint": "开启后，重要度为 4-5 且尚未衰减的记忆即使与当前问题字面无关也会参与召回。",
+    "default": false
+  },
+  "memory_recall_always_top_k": {
+    "description": "每轮保底注入条数",
+    "type": "int",
+    "hint": "按置顶、重要度、时效额外取 N 条，即使不相关也注入。默认 0；只关闭此项时，重要度绕过开关仍独立生效。",
+    "default": 0,
+    "slider": {
+      "min": 0,
+      "max": 10,
+      "step": 1
+    }
+  },
+  "memory_recall_fallback": {
+    "description": "没有相关记忆时注入一条最重要的",
+    "type": "bool",
+    "hint": "默认关闭。开启后每轮至少注入一条记忆，更能体现“记得你”，但也可能和当前话题无关。",
+    "default": false
+  },
+  "owner_alias": {
+    "description": "记忆里对主人的称呼",
+    "type": "string",
+    "hint": "仅对完整匹配下方平台、机器人账号、主人账号的私聊生效；未绑定或其他人使用名字或「他」。不根据消息自称认人。",
+    "default": ""
+  },
+  "owner_platform": {
+    "description": "主人身份：平台类型",
+    "type": "string",
+    "hint": "填写事件的平台类型，如 aiocqhttp；三个身份字段必须全部匹配才使用主人关系与称呼。",
+    "default": ""
+  },
+  "owner_bot_id": {
+    "description": "主人身份：机器人账号",
+    "type": "string",
+    "hint": "当前机器人在该平台的账号 ID（QQ 平台填机器人 QQ 号），不是平台实例名称。",
+    "default": ""
+  },
+  "owner_user_id": {
+    "description": "主人身份：主人账号",
+    "type": "string",
+    "hint": "主人在该平台的真实发送者账号 ID（QQ 平台填主人 QQ 号）。人格中主人关系应以本轮身份核验为准。",
+    "default": ""
+  },
+  "memory_dedupe_context": {
+    "description": "提取时参考的已有记忆条数",
+    "type": "int",
+    "hint": "把最近 N 条已有记忆一起交给提取模型，用于判断“重复”或“替换”。设为 0 关闭，只靠字面相似度去重。",
+    "default": 40,
+    "slider": {
+      "min": 0,
+      "max": 60,
+      "step": 1
+    }
+  },
+  "base_half_life_days": {
+    "description": "记忆基础半衰期（天）",
+    "type": "int",
+    "hint": "重要度、重复提及和真实召回会延长有效半衰期。",
+    "default": 30,
+    "slider": {
+      "min": 1,
+      "max": 365,
+      "step": 1
+    }
+  },
+  "archive_retention_threshold": {
+    "description": "记忆归档保留率阈值",
+    "type": "float",
+    "hint": "低于此保留率的记忆进入可恢复归档，不会自动物理删除。",
+    "default": 0.1,
+    "slider": {
+      "min": 0.01,
+      "max": 0.5,
+      "step": 0.01
+    }
+  },
+  "destructive_commands_require_confirm": {
+    "description": "危险指令需要二次确认",
+    "type": "bool",
+    "hint": "开启后 /记忆 清空 需要再发送一次“/记忆 清空 确认”才会删除。",
+    "default": true
+  },
+  "diary_enabled": {
+    "description": "启用日记功能",
+    "type": "bool",
+    "hint": "插件级总开关。关闭后定时任务不运行，但命令仍可查看已写的日记。单个会话还要用 /日记 开启 单独启用。",
+    "default": true
+  },
+  "diary_time": {
+    "description": "每天写日记的时间",
+    "type": "string",
+    "hint": "24 小时制 HH:MM，按下面的时区解释。默认 23:00；错过这个时间点（例如重启）会在当天剩余时间内补写。",
+    "default": "23:00"
+  },
+  "diary_timezone": {
+    "description": "日记使用的时区",
+    "type": "string",
+    "hint": "IANA 时区名，例如 Asia/Shanghai。容器缺少时区数据时会回退到宿主机本地时区。",
+    "default": "Asia/Shanghai"
+  },
+  "diary_min_turns": {
+    "description": "写日记的最少对话轮数",
+    "type": "int",
+    "hint": "当天少于这么多轮就不会写，避免为一句闲聊生成一篇日记。",
+    "default": 4,
+    "slider": {
+      "min": 1,
+      "max": 100,
+      "step": 1
+    }
+  },
+  "diary_prompt": {
+    "description": "自定义日记写作要求",
+    "type": "text",
+    "hint": "留空使用内置要求（第一人称、正文 2~4 句、一句感受）。填写后替换内置的长度/风格要求，例如“写 800 字，分 5 段，重点写晚上”。日期、正文+感受格式、JSON 返回和素材仍由插件补齐；写多少字由这段提示词决定，代码不会截断成稿。",
+    "default": ""
+  },
+  "diary_rewrite_prompt": {
+    "description": "自定义日记重写要求",
+    "type": "text",
+    "hint": "只用于“重写日记”，与日常写日记的 diary_prompt 相互独立。留空使用内置重写要求（补全当天内容、篇幅按需要、段落不限）。填写后替换重写的长度/风格要求，例如“补全所有细节，写 800 字，分多段”。代码不会截断重写成稿。",
+    "default": ""
+  },
+  "diary_digest_max_chars": {
+    "description": "写日记时送入模型的素材上限（字符）",
+    "type": "int",
+    "hint": "插件平时只保存每轮被截断的一行摘要，不会保存原始对话；这个值决定一次写日记最多带多少素材，直接影响 token 消耗。",
+    "default": 1800,
+    "slider": {
+      "min": 200,
+      "max": 6000,
+      "step": 100
+    }
+  },
+  "diary_tidy_enabled": {
+    "description": "写日记时合并重复记忆",
+    "type": "bool",
+    "hint": "不调用模型：只把措辞几乎相同（去掉“我/用户”等主语后一致）的记忆合并成一条，保留最早的原话，其余标记为已被取代；置顶记忆不参与。",
+    "default": true
+  },
+  "diary_material_keep_days": {
+    "description": "未写成的日记素材保留天数",
+    "type": "int",
+    "hint": "只影响「素材」，不影响已写好的日记（日记永久保存）。素材正常在当天日记写好后立即删除；当天更完整的摘要会随日记存一份，供以后重写。只有没写成的那天会留下（不足轮数、模型失败，或 23:00 之后多出来的对话）。保留最近 N 天（含今天），0 表示只留今天。",
+    "default": 3,
+    "slider": {
+      "min": 0,
+      "max": 30,
+      "step": 1
+    }
+  },
+  "memory_curation_enabled": {
+    "description": "每晚整理记忆列表",
+    "type": "bool",
+    "hint": "默认开启。新日记后再调用一次模型，只做 update/merge/archive/add。仅依据日记话题、现有记忆和用户原文证据整理；不把推测或回应策略变成事实/照管任务。置顶不动，只归档不物理删除。",
+    "default": true
+  },
+  "memory_curation_max_ops": {
+    "description": "每晚最多整理几条记忆",
+    "type": "int",
+    "hint": "默认 8。限制单次整理的操作数，避免模型一次改动太多；不确定的条目会留空。",
+    "default": 8,
+    "slider": {
+      "min": 1,
+      "max": 20,
+      "step": 1
+    }
+  },
+  "memory_retrieval_timeout": {
+    "description": "记忆检索总等待预算（秒）",
+    "type": "float",
+    "default": 8.0,
+    "hint": "本地候选读取与 C/B/Rerank 共用预算；各远程阶段同时受自身超时限制。预算耗尽后保留已取得结果继续回复，最终身份和有效期核验仍会执行。",
+    "slider": {
+      "min": 0.5,
+      "max": 60.0,
+      "step": 0.5
+    }
+  },
+  "memory_semantic_enabled": {
+    "description": "B：启用按需大模型检索",
+    "type": "bool",
+    "default": true,
+    "hint": "本地与可选嵌入线索不足、且明确回忆或工具查询时，用检索大模型选择记忆编号。关闭后仍可独立使用嵌入与本地检索。"
+  },
+  "memory_semantic_timeout": {
+    "description": "语义检索超时（秒）",
+    "type": "float",
+    "default": 6.0,
+    "hint": "超时回退字面匹配，不阻止回复。最多扫描 80 条有效记忆、16000 字符。",
+    "slider": {
+      "min": 0.5,
+      "max": 20.0,
+      "step": 0.5
+    }
+  },
+  "memory_semantic_model_id": {
+    "description": "B：检索大模型",
+    "type": "string",
+    "default": "",
+    "_special": "select_provider",
+    "hint": "留空严格使用当前会话的对话模型；不使用记忆提取/日记模型设置。"
+  },
+  "memory_embedding_enabled": {
+    "description": "C：启用嵌入检索",
+    "type": "bool",
+    "default": false,
+    "hint": "启用后，本地匹配不足时使用下方嵌入提供商；关闭后停止嵌入调用，回到本地匹配＋按需大模型检索（B 开启时）。保留记忆、日记与向量缓存。"
+  },
+  "memory_embedding_model_id": {
+    "description": "C：嵌入模型提供商 ID",
+    "type": "string",
+    "default": "",
+    "hint": "填写 AstrBot「模型提供商 → 嵌入」中已配置模型的 ID，不是聊天模型名称。留空不会自动选模型，启用 C 时会回退 B。当前宿主设置组件没有嵌入专用下拉框。"
+  },
+  "memory_embedding_timeout": {
+    "description": "C：嵌入检索超时（秒）",
+    "type": "float",
+    "default": 6.0,
+    "hint": "首次使用或模型变化时按需建立向量缓存，超时则回退。",
+    "slider": {
+      "min": 0.5,
+      "max": 30.0,
+      "step": 0.5
+    }
+  },
+  "memory_embedding_min_similarity": {
+    "description": "C：向量相似度门槛",
+    "type": "float",
+    "default": 0.55,
+    "hint": "不同嵌入模型分数分布不同，需要按实际命中调整；这不是正确概率。",
+    "slider": {
+      "min": 0.0,
+      "max": 1.0,
+      "step": 0.05
+    }
+  },
+  "memory_rerank_model_id": {
+    "description": "可选 Rerank 模型提供商 ID",
+    "type": "string",
+    "default": "",
+    "hint": "填写 AstrBot「模型提供商 → 重排序」中的提供商 ID；留空停用。只排序已通过身份/有效期与相关度筛选的候选，最多 20 条，至少 2 条才调用。"
+  },
+  "memory_rerank_timeout": {
+    "description": "Rerank 超时（秒）",
+    "type": "float",
+    "default": 4.0,
+    "hint": "模型不可用、响应无效或超时时保留原候选排序。",
+    "slider": {
+      "min": 0.5,
+      "max": 20.0,
+      "step": 0.5
+    }
+  }
+}
