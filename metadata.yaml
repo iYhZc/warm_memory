@@ -8,8 +8,8 @@ desc: >-
   不写入或修改人格，不限制回复长度；本发布版不面向群聊使用。
 version: 0.10.25
 author: YanH
-
 astrbot_version: ">=4.24.0"
+category: 长期记忆
 tags:
   - AI
   - 记忆
