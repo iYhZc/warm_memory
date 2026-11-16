@@ -4,7 +4,7 @@
 
 插件不写人格、不改人格、不限制回复长度，不注入好感度或心理判断；记忆和日记按需读取，滚动摘要仅在用户确认手动压缩后使用。
 
-本文描述安装默认值；请按自己的模型、身份和日记配置使用。版本为 0.10.25 / schema12。
+本文描述安装默认值；请按自己的模型、身份和日记配置使用。版本为 0.10.26 / schema12。
 
 ## 默认行为与成本
 
@@ -280,4 +280,14 @@ warm0.10.21配合主动插件`.6`时，当前私聊新增“主动生成”（`p
 
 ## 当前版本
 
-0.10.25 / schema12。反思和专用睡前选择提示已移除；群记忆设置页入口已隐藏。模型整理、本地去重、检索、日记、开销统计、审阅式压缩及主动插件协作保留。主动协作需要另行安装兼容插件，本插件本身不创建主动排期。
+0.10.26 / schema12。反思和专用睡前选择提示已移除；群记忆设置页入口已隐藏。模型整理、本地去重、检索、日记、开销统计、审阅式压缩及主动插件协作保留。主动协作需要另行安装兼容插件，本插件本身不创建主动排期。
+
+## 灵感来源
+
+- [AstrBot 插件开发指南](https://docs.astrbot.app/dev/star/plugin-new.html)
+- [astrbot_plugin_mnemosyne](https://github.com/lxfight/astrbot_plugin_mnemosyne)
+- [astrbot_plugin_livingmemory](https://github.com/lxfight-s-Astrbot-Plugins/astrbot_plugin_livingmemory)
+- [astrbot_plugin_self_evolution](https://github.com/Renyus/astrbot_plugin_self_evolution)
+- [astrbot_plugin_angel_memory](https://github.com/kawayiYokami/astrbot_plugin_angel_memory)
+
+本插件借鉴的是功能和产品思路，没有复制上述项目的实现代码。
